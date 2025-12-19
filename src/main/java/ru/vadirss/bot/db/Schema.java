@@ -10,8 +10,14 @@ public final class Schema {
 
     public static void migrate(Database db) throws SQLException {
         try (Connection c = db.getConnection()) {
-            try (Statement st = c.createStatement()) {
+            boolean oldAuto = c.getAutoCommit();
+            c.setAutoCommit(false);
 
+            try (Statement st = c.createStatement()) {
+                st.execute("PRAGMA foreign_keys=ON;");
+                st.execute("PRAGMA busy_timeout=5000;");
+
+                // --- ТВОИ CREATE TABLE (как в текущем Schema.java) ---
                 st.execute("CREATE TABLE IF NOT EXISTS users (" +
                         "tg_id INTEGER PRIMARY KEY," +
                         "chat_id INTEGER NOT NULL," +
@@ -71,28 +77,6 @@ public final class Schema {
                         "id INTEGER PRIMARY KEY AUTOINCREMENT," +
                         "team_id INTEGER NOT NULL," +
                         "text TEXT NOT NULL," +
-                        "created_at TEXT NOT NULL" +
-                        ");");
-
-                st.execute("CREATE TABLE IF NOT EXISTS users (" +
-                        "tg_id INTEGER PRIMARY KEY," +
-                        "chat_id INTEGER NOT NULL," +
-                        "role TEXT NOT NULL DEFAULT 'PLAYER'," +
-                        "consent INTEGER NOT NULL DEFAULT 0," +
-                        "full_name TEXT," +
-                        "phone TEXT," +
-                        "team_id INTEGER," +
-                        "position TEXT," +
-                        "points INTEGER NOT NULL DEFAULT 0," +
-                        "state TEXT NOT NULL DEFAULT 'WAIT_CONSENT'," +
-                        "state_data TEXT NOT NULL DEFAULT '{}'," +
-                        "created_at TEXT NOT NULL," +
-                        "updated_at TEXT NOT NULL" +
-                        ");");
-
-                st.execute("CREATE TABLE IF NOT EXISTS teams (" +
-                        "id INTEGER PRIMARY KEY AUTOINCREMENT," +
-                        "name TEXT NOT NULL UNIQUE," +
                         "created_at TEXT NOT NULL" +
                         ");");
 
@@ -228,6 +212,9 @@ public final class Schema {
                         "UNIQUE(chat_id, message_id, kind)" +
                         ");");
             }
+
+            c.commit();           // <<< ВОТ ЭТОГО у тебя по сути не хватало
+            c.setAutoCommit(oldAuto);
         }
     }
 }
