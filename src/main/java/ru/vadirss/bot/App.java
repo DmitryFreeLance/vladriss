@@ -1,0 +1,72 @@
+package ru.vadirss.bot;
+
+import org.telegram.telegrambots.meta.TelegramBotsApi;
+import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
+import ru.vadirss.bot.config.Config;
+import ru.vadirss.bot.db.Database;
+import ru.vadirss.bot.db.Schema;
+import ru.vadirss.bot.scheduler.SchedulerService;
+import ru.vadirss.bot.service.*;
+import ru.vadirss.bot.telegram.VadirssBot;
+
+public final class App {
+
+    public static void main(String[] args) throws Exception {
+        Config cfg = Config.load();
+
+        Database db = new Database(cfg);
+        Schema.migrate(db);
+
+        // --- Services ---
+        UserService userService = new UserService(db);
+        TeamService teamService = new TeamService(db);
+        ScheduleService scheduleService = new ScheduleService(db);
+        TrainingSessionService trainingSessionService = new TrainingSessionService(db, cfg, scheduleService);
+
+        PointsService pointsService = new PointsService(db);
+        TeamEventService teamEventService = new TeamEventService(db);
+
+        AiService aiService = new AiService(cfg, db);
+
+        AchievementService achievementService = new AchievementService(db, teamEventService);
+        ChallengeService challengeService = new ChallengeService(db, cfg, aiService, pointsService, teamEventService, achievementService);
+        PollService pollService = new PollService(db, cfg, teamEventService);
+
+        MediaService mediaService = new MediaService(db, cfg);
+        ExcelService excelService = new ExcelService(db, cfg);
+
+        InteractiveSessionService interactiveSessions = new InteractiveSessionService(db);
+        CoachRatingService coachRatingService = new CoachRatingService(db, cfg);
+        NotificationService notificationService = new NotificationService(db);
+
+        BotFacade facade = new BotFacade(
+                cfg,
+                db,
+                userService,
+                teamService,
+                scheduleService,
+                trainingSessionService,
+                challengeService,
+                pollService,
+                achievementService,
+                aiService,
+                mediaService,
+                pointsService,
+                excelService,
+                teamEventService,
+                interactiveSessions,
+                coachRatingService,
+                notificationService
+        );
+
+        VadirssBot bot = new VadirssBot(cfg, facade);
+
+        TelegramBotsApi api = new TelegramBotsApi(DefaultBotSession.class);
+        api.registerBot(bot);
+
+        SchedulerService scheduler = new SchedulerService(cfg, facade, bot);
+        scheduler.start();
+
+        System.out.println("Vadirss bot started. Timezone=" + cfg.zoneId());
+    }
+}
