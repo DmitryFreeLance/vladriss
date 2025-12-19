@@ -6,14 +6,19 @@ import java.sql.Statement;
 
 public final class Schema {
 
-    private Schema() {}
+    private Schema() {
+    }
 
     public static void migrate(Database db) throws SQLException {
-        try (Connection c = db.getConnection()) {
-            boolean oldAuto = c.getAutoCommit();
-            c.setAutoCommit(false);
+        try (Connection c = db.getConnection();
+             Statement st = c.createStatement()) {
 
-            try (Statement st = c.createStatement()) {
+            st.execute("PRAGMA foreign_keys=ON;");
+            st.execute("PRAGMA busy_timeout=5000;");
+
+            st.execute("SAVEPOINT schema_migrate;");
+
+            try {
                 st.execute("PRAGMA foreign_keys=ON;");
                 st.execute("PRAGMA busy_timeout=5000;");
 
@@ -211,10 +216,12 @@ public final class Schema {
                         "expires_at TEXT," +
                         "UNIQUE(chat_id, message_id, kind)" +
                         ");");
+                st.execute("RELEASE SAVEPOINT schema_migrate;");
+            } catch (SQLException e) {
+                st.execute("ROLLBACK TO SAVEPOINT schema_migrate;");
+                st.execute("RELEASE SAVEPOINT schema_migrate;");
+                throw e;
             }
-
-            c.commit();           // <<< ВОТ ЭТОГО у тебя по сути не хватало
-            c.setAutoCommit(oldAuto);
         }
     }
 }
