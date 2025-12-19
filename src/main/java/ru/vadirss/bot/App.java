@@ -14,8 +14,19 @@ public final class App {
     public static void main(String[] args) throws Exception {
         Config cfg = Config.load();
 
+        System.out.println("DB_PATH env=" + System.getenv("DB_PATH"));
+        System.out.println("Config dbPath=" + cfg.dbPath().toAbsolutePath());
+
         Database db = new Database(cfg);
         Schema.migrate(db);
+
+        try (var c = db.getConnection();
+             var st = c.createStatement();
+             var rs = st.executeQuery("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")) {
+            System.out.print("Tables: ");
+            while (rs.next()) System.out.print(rs.getString(1) + " ");
+            System.out.println();
+        }
 
         // --- Services ---
         UserService userService = new UserService(db);
