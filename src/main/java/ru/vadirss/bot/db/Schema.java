@@ -74,6 +74,28 @@ public final class Schema {
                         "created_at TEXT NOT NULL" +
                         ");");
 
+                st.execute("CREATE TABLE IF NOT EXISTS users (" +
+                        "tg_id INTEGER PRIMARY KEY," +
+                        "chat_id INTEGER NOT NULL," +
+                        "role TEXT NOT NULL DEFAULT 'PLAYER'," +
+                        "consent INTEGER NOT NULL DEFAULT 0," +
+                        "full_name TEXT," +
+                        "phone TEXT," +
+                        "team_id INTEGER," +
+                        "position TEXT," +
+                        "points INTEGER NOT NULL DEFAULT 0," +
+                        "state TEXT NOT NULL DEFAULT 'WAIT_CONSENT'," +
+                        "state_data TEXT NOT NULL DEFAULT '{}'," +
+                        "created_at TEXT NOT NULL," +
+                        "updated_at TEXT NOT NULL" +
+                        ");");
+
+                st.execute("CREATE TABLE IF NOT EXISTS teams (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                        "name TEXT NOT NULL UNIQUE," +
+                        "created_at TEXT NOT NULL" +
+                        ");");
+
                 st.execute("CREATE TABLE IF NOT EXISTS player_challenges (" +
                         "id INTEGER PRIMARY KEY AUTOINCREMENT," +
                         "session_id INTEGER NOT NULL," +
